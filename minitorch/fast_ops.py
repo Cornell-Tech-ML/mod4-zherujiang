@@ -7,7 +7,6 @@ from numba import prange
 from numba import njit as _njit
 
 from .tensor_data import (
-    MAX_DIMS,
     broadcast_index,
     index_to_position,
     shape_broadcast,
@@ -19,7 +18,7 @@ if TYPE_CHECKING:
     from typing import Callable, Optional
 
     from .tensor import Tensor
-    from .tensor_data import Index, Shape, Storage, Strides
+    from .tensor_data import Shape, Storage, Strides
 
 # TIP: Use `NUMBA_DISABLE_JIT=1 pytest tests/ -m task3_1` to run these tests without JIT.
 
@@ -30,6 +29,18 @@ Fn = TypeVar("Fn")
 
 
 def njit(fn: Fn, **kwargs: Any) -> Fn:
+    """Wrapper for CUDA JIT compilation.
+
+    Args:
+    ----
+        fn: Function to compile
+        **kwargs: Additional arguments to pass to numba.cuda.jit
+
+    Returns:
+    -------
+        FakeCUDAKernel: Compiled CUDA kernel
+
+    """
     return _njit(inline="always", **kwargs)(fn)  # type: ignore
 
 
@@ -168,7 +179,32 @@ def tensor_map(
         in_shape: Shape,
         in_strides: Strides,
     ) -> None:
-        raise NotImplementedError("Need to include this file from past assignment.")
+        # Task 3.1
+        size = len(out)
+
+        if np.array_equal(out_strides, in_strides) and np.array_equal(
+            out_shape, in_shape
+        ):
+            # Parallel loop over all elements
+            for i in prange(size):
+                out[i] += fn(in_storage[i])
+        else:
+            # Parallel loop over all elements
+            for i in prange(size):
+                # Convert ordinal index to n-dimensional index
+                out_index = np.zeros(len(out_shape), np.int32)
+                in_index = np.zeros(len(in_shape), np.int32)
+
+                # Map output index to input index (broadcasting)
+                to_index(i, out_shape, out_index)
+                broadcast_index(out_index, out_shape, in_shape, in_index)
+
+                # Calculate positions in storage
+                out_pos = index_to_position(out_index, out_strides)
+                in_pos = index_to_position(in_index, in_strides)
+
+                # Apply the function and store result in a local copy
+                out[out_pos] += fn(in_storage[in_pos])
 
     return njit(_map, parallel=True)  # type: ignore
 
@@ -207,7 +243,38 @@ def tensor_zip(
         b_shape: Shape,
         b_strides: Strides,
     ) -> None:
-        raise NotImplementedError("Need to include this file from past assignment.")
+        # Task 3.1.
+        size = len(out)
+
+        if (
+            np.array_equal(out_strides, a_strides)
+            and np.array_equal(out_strides, b_strides)
+            and np.array_equal(out_shape, a_shape)
+            and np.array_equal(out_shape, b_shape)
+        ):
+            # Parallel loop over all elements
+            for i in prange(size):
+                out[i] += fn(a_storage[i], b_storage[i])
+        else:
+            # Parallel loop over all elements
+            for i in prange(size):
+                # Convert ordinal index to n-dimensional index
+                out_index = np.zeros(len(out_shape), np.int32)
+                a_index = np.zeros(len(a_shape), np.int32)
+                b_index = np.zeros(len(b_shape), np.int32)
+
+                # Map output index to input index (broadcasting)
+                to_index(i, out_shape, out_index)
+                broadcast_index(out_index, out_shape, a_shape, a_index)
+                broadcast_index(out_index, out_shape, b_shape, b_index)
+
+                # Calculate positions in storage
+                out_pos = index_to_position(out_index, out_strides)
+                a_pos = index_to_position(a_index, a_strides)
+                b_pos = index_to_position(b_index, b_strides)
+
+                # Apply the function and store result in a local copy
+                out[out_pos] += fn(a_storage[a_pos], b_storage[b_pos])
 
     return njit(_zip, parallel=True)  # type: ignore
 
@@ -242,7 +309,28 @@ def tensor_reduce(
         a_strides: Strides,
         reduce_dim: int,
     ) -> None:
-        raise NotImplementedError("Need to include this file from past assignment.")
+        # Task 3.1
+        # Calculate the size of the output and the dimension to reduce
+        size = len(out)
+        reduce_size = a_shape[reduce_dim]
+
+        # Parallel loop over all output elements
+        for i in prange(size):
+            # Convert output index to n-dimensional index
+            out_index = np.zeros(len(out_shape), np.int32)
+            to_index(i, out_shape, out_index)
+
+            # Get output position
+            out_pos = index_to_position(out_index, out_strides)
+
+            temp = out[out_pos]
+            # Reduce over the specified dimension, reuse out_index for indexing into a_storage
+            for j in range(reduce_size):
+                out_index[reduce_dim] = j
+                a_pos = index_to_position(out_index, a_strides)
+                temp = fn(temp, a_storage[a_pos])
+
+            out[out_pos] = temp
 
     return njit(_reduce, parallel=True)  # type: ignore
 
@@ -290,10 +378,49 @@ def _tensor_matrix_multiply(
         None : Fills in `out`
 
     """
+    # Task 3.2
     a_batch_stride = a_strides[0] if a_shape[0] > 1 else 0
     b_batch_stride = b_strides[0] if b_shape[0] > 1 else 0
 
-    raise NotImplementedError("Need to include this file from past assignment.")
+    # Get the dimensions for the matrix multiplication
+    batch_size = out_shape[0]
+    rows = out_shape[1]
+    cols = out_shape[2]
+    reduce_dim = a_shape[2]
+
+    # Parallel loop over batches and rows
+    for batch in prange(batch_size):
+        a_pos_i = batch * a_batch_stride
+        b_pos_b = batch * b_batch_stride
+        out_pos_i = batch * out_strides[0]
+
+        for i in range(rows):
+            b_pos_j = b_pos_b
+            out_pos_j = out_pos_i
+            for j in range(cols):
+                # Initialize accumulator
+                acc = 0.0
+
+                a_pos = a_pos_i
+                b_pos = b_pos_j
+                out_pos = out_pos_j
+                # Inner reduction loop
+                for k in range(reduce_dim):
+                    acc += a_storage[a_pos] * b_storage[b_pos]
+                    # update a_pos and b_pos
+                    a_pos += a_strides[2]
+                    b_pos += b_strides[1]
+
+                # Store result
+                out[out_pos] += acc
+
+                # update b_pos and out_pos
+                b_pos_j += b_strides[2]
+                out_pos_j += out_strides[2]
+
+            # update a_pos and out_pos
+            a_pos_i += a_strides[1]
+            out_pos_i += out_strides[1]
 
 
 tensor_matrix_multiply = njit(_tensor_matrix_multiply, parallel=True)
