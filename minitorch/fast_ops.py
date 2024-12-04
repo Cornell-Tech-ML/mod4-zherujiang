@@ -7,6 +7,7 @@ from numba import prange
 from numba import njit as _njit
 
 from .tensor_data import (
+    MAX_DIMS,
     broadcast_index,
     index_to_position,
     shape_broadcast,
@@ -192,8 +193,8 @@ def tensor_map(
             # Parallel loop over all elements
             for i in prange(size):
                 # Convert ordinal index to n-dimensional index
-                out_index = np.zeros(len(out_shape), np.int32)
-                in_index = np.zeros(len(in_shape), np.int32)
+                out_index = np.empty(MAX_DIMS, np.int32)
+                in_index = np.empty(MAX_DIMS, np.int32)
 
                 # Map output index to input index (broadcasting)
                 to_index(i, out_shape, out_index)
@@ -259,9 +260,9 @@ def tensor_zip(
             # Parallel loop over all elements
             for i in prange(size):
                 # Convert ordinal index to n-dimensional index
-                out_index = np.zeros(len(out_shape), np.int32)
-                a_index = np.zeros(len(a_shape), np.int32)
-                b_index = np.zeros(len(b_shape), np.int32)
+                out_index = np.empty(MAX_DIMS, np.int32)
+                a_index = np.empty(MAX_DIMS, np.int32)
+                b_index = np.empty(MAX_DIMS, np.int32)
 
                 # Map output index to input index (broadcasting)
                 to_index(i, out_shape, out_index)
@@ -317,20 +318,21 @@ def tensor_reduce(
         # Parallel loop over all output elements
         for i in prange(size):
             # Convert output index to n-dimensional index
-            out_index = np.zeros(len(out_shape), np.int32)
+            out_index = np.empty(MAX_DIMS, np.int32)
             to_index(i, out_shape, out_index)
 
             # Get output position
             out_pos = index_to_position(out_index, out_strides)
 
-            temp = out[out_pos]
-            # Reduce over the specified dimension, reuse out_index for indexing into a_storage
-            for j in range(reduce_size):
-                out_index[reduce_dim] = j
-                a_pos = index_to_position(out_index, a_strides)
-                temp = fn(temp, a_storage[a_pos])
+            accum = out[out_pos]
+            step = a_strides[reduce_dim]
+            a_pos = index_to_position(out_index, a_strides)
+            # Reduce over the specified dimension, use step to index into a_storage
+            for s in range(reduce_size):
+                accum = fn(accum, a_storage[a_pos])
+                a_pos += step
 
-            out[out_pos] = temp
+            out[out_pos] = accum
 
     return njit(_reduce, parallel=True)  # type: ignore
 
@@ -387,40 +389,21 @@ def _tensor_matrix_multiply(
     rows = out_shape[1]
     cols = out_shape[2]
     reduce_dim = a_shape[2]
-
-    # Parallel loop over batches and rows
+    
     for batch in prange(batch_size):
-        a_pos_i = batch * a_batch_stride
-        b_pos_b = batch * b_batch_stride
-        out_pos_i = batch * out_strides[0]
-
         for i in range(rows):
-            b_pos_j = b_pos_b
-            out_pos_j = out_pos_i
             for j in range(cols):
-                # Initialize accumulator
-                acc = 0.0
-
-                a_pos = a_pos_i
-                b_pos = b_pos_j
-                out_pos = out_pos_j
-                # Inner reduction loop
+                a_inner = batch * a_batch_stride + i * a_strides[1]
+                b_inner = batch * b_batch_stride + j * b_strides[2]
+                
+                accum = 0
                 for k in range(reduce_dim):
-                    acc += a_storage[a_pos] * b_storage[b_pos]
-                    # update a_pos and b_pos
-                    a_pos += a_strides[2]
-                    b_pos += b_strides[1]
-
-                # Store result
-                out[out_pos] += acc
-
-                # update b_pos and out_pos
-                b_pos_j += b_strides[2]
-                out_pos_j += out_strides[2]
-
-            # update a_pos and out_pos
-            a_pos_i += a_strides[1]
-            out_pos_i += out_strides[1]
+                    accum += a_storage[a_inner] * b_storage[b_inner]
+                    a_inner += a_strides[2]
+                    b_inner += b_strides[1]
+                    
+                out_pos = batch * out_strides[0] + i * out_strides[1] + j * out_strides[2]
+                out[out_pos] = accum
 
 
 tensor_matrix_multiply = njit(_tensor_matrix_multiply, parallel=True)
