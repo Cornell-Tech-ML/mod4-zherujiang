@@ -391,8 +391,8 @@ def _tensor_matrix_multiply(
     reduce_dim = a_shape[2]
     
     for batch in prange(batch_size):
-        for i in range(rows):
-            for j in range(cols):
+        for i in prange(rows):
+            for j in prange(cols):
                 a_inner = batch * a_batch_stride + i * a_strides[1]
                 b_inner = batch * b_batch_stride + j * b_strides[2]
                 
