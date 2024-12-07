@@ -65,9 +65,9 @@ class Function:
 
 class Neg(Function):
     @staticmethod
-    def forward(ctx: Context, t1: Tensor) -> Tensor:
+    def forward(ctx: Context, a: Tensor) -> Tensor:
         """Apply element-wise negation to the input tensor."""
-        return t1.f.neg_map(t1)
+        return a.f.neg_map(a)
 
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor) -> Tensor:
@@ -77,10 +77,10 @@ class Neg(Function):
 
 class Inv(Function):
     @staticmethod
-    def forward(ctx: Context, t1: Tensor) -> Tensor:
+    def forward(ctx: Context, a: Tensor) -> Tensor:
         """Compute the element-wise inverse of the input tensor."""
-        ctx.save_for_backward(t1)
-        return t1.f.inv_map(t1)
+        ctx.save_for_backward(a)
+        return a.f.inv_map(a)
 
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor) -> Tensor:
@@ -130,9 +130,9 @@ class Mul(Function):
 
 class Sigmoid(Function):
     @staticmethod
-    def forward(ctx: Context, t1: Tensor) -> Tensor:
+    def forward(ctx: Context, a: Tensor) -> Tensor:
         """Apply the sigmoid function element-wise to the input tensor."""
-        out = t1.f.sigmoid_map(t1)
+        out = a.f.sigmoid_map(a)
         ctx.save_for_backward(out)
         return out
 
@@ -145,37 +145,37 @@ class Sigmoid(Function):
 
 class ReLU(Function):
     @staticmethod
-    def forward(ctx: Context, t1: Tensor) -> Tensor:
+    def forward(ctx: Context, a: Tensor) -> Tensor:
         """Apply the ReLU function element-wise to the input tensor."""
-        ctx.save_for_backward(t1)
-        return t1.f.relu_map(t1)
+        ctx.save_for_backward(a)
+        return a.f.relu_map(a)
 
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor) -> Tensor:
         """Compute the gradient for the ReLU operation."""
-        (t1,) = ctx.saved_values
-        return t1.f.relu_back_zip(t1, grad_output)
+        (a,) = ctx.saved_values
+        return a.f.relu_back_zip(a, grad_output)
 
 
 class Log(Function):
     @staticmethod
-    def forward(ctx: Context, t1: Tensor) -> Tensor:
+    def forward(ctx: Context, a: Tensor) -> Tensor:
         """Compute the natural logarithm element-wise on the input tensor."""
-        ctx.save_for_backward(t1)
-        return t1.f.log_map(t1)
+        ctx.save_for_backward(a)
+        return a.f.log_map(a)
 
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor) -> Tensor:
         """Compute the gradient for the logarithm operation."""
-        (t1,) = ctx.saved_values
-        return t1.f.log_back_zip(t1, grad_output)
+        (a,) = ctx.saved_values
+        return a.f.log_back_zip(a, grad_output)
 
 
 class Exp(Function):
     @staticmethod
-    def forward(ctx: Context, t1: Tensor) -> Tensor:
+    def forward(ctx: Context, a: Tensor) -> Tensor:
         """Compute the exponential function element-wise on the input tensor."""
-        out = t1.f.exp_map(t1)
+        out = a.f.exp_map(a)
         ctx.save_for_backward(out)
         return out
 
@@ -203,9 +203,9 @@ class Sum(Function):
         """Compute the gradient for the sum operation."""
         (original_tensor, dim) = ctx.saved_values
         if dim is None:
-            return original_tensor.expand(grad_output)
+            return grad_output
         else:
-            return original_tensor.expand(grad_output), zeros(dim.shape)
+            return grad_output, 0.0
 
 
 class LT(Function):

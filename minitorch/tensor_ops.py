@@ -333,7 +333,7 @@ def tensor_zip(
         b_strides: Strides,
     ) -> None:
         """Applies the zipping function to two input tensors and stores the result in the output tensor."""
-        # 2.3.
+        # Task 2.3.
         out_index = np.array(out_shape)
         a_index = np.array(a_shape)
         b_index = np.array(b_shape)
