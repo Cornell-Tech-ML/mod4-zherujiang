@@ -26,16 +26,26 @@ class Module:
 
     def modules(self) -> Sequence[Module]:
         """Return the direct child modules of this module."""
+        # When we use self._modules python will trigger the __getattr__ method.
+        # Using self.__dict__ is a trick to get around that.
         m: Dict[str, Module] = self.__dict__["_modules"]
         return list(m.values())
 
     def train(self) -> None:
-        """Set the mode of this module and all descendent modules to `train`."""
-        raise NotImplementedError("Need to include this file from past assignment.")
+        """Set the `training` flag of this and descendent to true."""
+        # Task 0.4.
+        child_modules = self.modules()
+        for child in child_modules:
+            child.train()
+        self.training = True
 
     def eval(self) -> None:
-        """Set the mode of this module and all descendent modules to `eval`."""
-        raise NotImplementedError("Need to include this file from past assignment.")
+        """Set the `training` flag of this and descendent to false."""
+        # Task 0.4.
+        child_modules = self.modules()
+        for child in child_modules:
+            child.eval()
+        self.training = False
 
     def named_parameters(self) -> Sequence[Tuple[str, Parameter]]:
         """Collect all the parameters of this module and its descendents.
@@ -45,11 +55,30 @@ class Module:
             The name and `Parameter` of each ancestor parameter.
 
         """
-        raise NotImplementedError("Need to include this file from past assignment.")
+        # Task 0.4.
+
+        # parameters of the module itself
+        named_parameters = [
+            (key, value) for key, value in self.__dict__["_parameters"].items()
+        ]
+        # parameters of the child modules
+        for m_key, child_module in self.__dict__["_modules"].items():
+            child_parameters = child_module.named_parameters()
+            child_named_parameters = [
+                (m_key + "." + name, p) for (name, p) in child_parameters
+            ]
+            named_parameters.extend(child_named_parameters)
+
+        return named_parameters
 
     def parameters(self) -> Sequence[Parameter]:
         """Enumerate over all the parameters of this module and its descendents."""
-        raise NotImplementedError("Need to include this file from past assignment.")
+        # Implement for Task 0.4.
+        all_parameters = list(self.__dict__["_parameters"].values())
+
+        for child in self.modules():
+            all_parameters.extend(child.parameters())
+        return all_parameters
 
     def add_parameter(self, k: str, v: Any) -> Parameter:
         """Manually add a parameter. Useful helper for scalar parameters.
@@ -85,6 +114,7 @@ class Module:
         return None
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        """Call the forward function"""
         return self.forward(*args, **kwargs)
 
     def __repr__(self) -> str:
