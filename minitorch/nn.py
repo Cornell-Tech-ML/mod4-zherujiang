@@ -109,13 +109,16 @@ class Max(Function):
         return grad_output * arg_max, 0.0
     
     
-# max = Max.apply
 def max(a: Tensor, dim: Optional[int] = None) -> Tensor:
-        """Computes the Max of all elements in the tensor or along a dimension."""
-        if dim is None:
-            return Max.apply(a.contiguous().view(a.size), tensor(0.0))
-        else:
-            return Max.apply(a, tensor(dim))
+    """Computes the Max of all elements in the tensor or along a dimension."""
+    if dim is None:
+        return Max.apply(a.contiguous().view(a.size), tensor(0.0))
+    else:
+        return Max.apply(a, tensor(dim))
+
+# def max(a: Tensor, dim: int) -> Tensor:
+#     """Computes the Max of all elements in the tensor or along a dimension."""
+#     return Max.apply(a, tensor(dim))
 
 def softmax(a: Tensor, dim: Optional[int] = None) -> Tensor:
     """Compute the softmax as a tensor.
