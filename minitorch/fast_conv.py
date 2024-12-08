@@ -7,8 +7,6 @@ from numba import njit as _njit
 from .autodiff import Context
 from .tensor import Tensor
 from .tensor_data import (
-    MAX_DIMS,
-    Index,
     Shape,
     Strides,
     Storage,
@@ -107,28 +105,24 @@ def _tensor_conv1d(
         out_index = np.zeros(3, dtype=np.int32)
         to_index(out_ordinal, out_shape, out_index)
         b, oc, i = out_index
-        
-        out_pos = (b * out_strides[0] + oc * out_strides[1] + i * out_strides[2])
-        
+
+        out_pos = b * out_strides[0] + oc * out_strides[1] + i * out_strides[2]
+
         accum = 0
         for ic in prange(in_channels):
             for k in range(kw):
                 # ki = k if not reverse else kw - k - 1
                 iw = i + k if not reverse else i - k
-                
+
                 # Check if we're within bounds
                 if 0 <= iw < width:
                     # Calculate positions in input and weight tensors
-                    in_pos = (
-                        b * s1[0] + ic * s1[1] + iw * s1[2]
-                    )
-                    weight_pos = (
-                        oc * s2[0] + ic * s2[1] + k * s2[2]
-                    )
+                    in_pos = b * s1[0] + ic * s1[1] + iw * s1[2]
+                    weight_pos = oc * s2[0] + ic * s2[1] + k * s2[2]
                     accum += input[in_pos] * weight[weight_pos]
-        
+
         out[out_pos] = accum
-        
+
 
 tensor_conv1d = njit(_tensor_conv1d, parallel=True)
 
@@ -175,7 +169,7 @@ class Conv1dFun(Function):
             Tuple[Tensor, Tensor] containing:
                 grad_input : Gradient with respect to the input, shape (batch, in_channels, w)
                 grad_weight : Gradient with respect to the weight, shape (out_channels, in_channels, kw)
-                
+
         """
         input, weight = ctx.saved_values
         batch, in_channels, w = input.shape
@@ -274,7 +268,7 @@ def _tensor_conv2d(
         out_index = np.zeros(4, dtype=np.int32)
         to_index(out_ordinal, out_shape, out_index)
         current_batch, oc, i, j = out_index
-        
+
         accum = 0
         out_pos = (
             current_batch * out_strides[0]
@@ -282,29 +276,19 @@ def _tensor_conv2d(
             + i * out_strides[2]
             + j * out_strides[3]
         )
-        
+
         for ic in prange(in_channels):
             for ki in range(kh):
-                for kj in range(kw):                   
+                for kj in range(kw):
                     ih = i + ki if not reverse else i - ki
                     iw = j + kj if not reverse else j - kj
-                    
+
                     if (0 <= ih < height) and (0 <= iw < width):
-                        weight_pos = (
-                            oc * s20
-                            + ic * s21
-                            + ki * s22
-                            + kj * s23
-                        )
-                        
-                        in_pos = (
-                            current_batch * s10
-                            + ic * s11
-                            + ih * s12
-                            + iw * s13
-                        )
+                        weight_pos = oc * s20 + ic * s21 + ki * s22 + kj * s23
+
+                        in_pos = current_batch * s10 + ic * s11 + ih * s12 + iw * s13
                         accum += weight[weight_pos] * input[in_pos]
-        
+
         out[out_pos] = accum
 
 
@@ -342,17 +326,19 @@ class Conv2dFun(Function):
         """Compute the gradient of 2D convolution with respect to input and weight.
 
         Args:
+        ----
             ctx: Context containing saved tensors from forward pass
             grad_output: Gradient with respect to conv output
                         Shape: batch x out_channel x h x w
 
         Returns:
+        -------
             Tuple containing:
                 grad_input: Gradient with respect to input
                            Shape: batch x in_channel x h x w
                 grad_weight: Gradient with respect to weight
                             Shape: out_channel x in_channel x kh x kw
-                            
+
         """
         input, weight = ctx.saved_values
         batch, in_channels, h, w = input.shape

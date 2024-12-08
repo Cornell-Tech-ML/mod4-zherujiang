@@ -199,7 +199,7 @@ class Sum(Function):
     @staticmethod
     def backward(
         ctx: Context, grad_output: Tensor
-    ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
+    ) -> Union[Tensor, Tuple[Tensor, float]]:
         """Compute the gradient for the sum operation."""
         (original_tensor, dim) = ctx.saved_values
         if dim is None:

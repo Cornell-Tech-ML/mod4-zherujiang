@@ -79,22 +79,22 @@ class CNNSentimentKim(minitorch.Module):
         out1 = self.conv1.forward(x).relu()
         out2 = self.conv2.forward(x).relu()
         out3 = self.conv3.forward(x).relu()
-        
+
         # Max over time
         m1 = minitorch.max(out1, dim=2)  # max pooling over the time dimension
         m2 = minitorch.max(out2, dim=2)
         m3 = minitorch.max(out3, dim=2)
-        
+
         # Combine feature maps
         combined = m1 + m2 + m3
         combined = combined.view(combined.shape[0], combined.shape[1])
-        
+
         # Apply linear layer
         out = self.linear.forward(combined).relu()
-        
+
         # Apply dropout (during training)
         out = minitorch.dropout(out, self.dropout, not self.training)
-        
+
         # Apply sigmoid activation
         return out.sigmoid().view(embeddings.shape[0])
 

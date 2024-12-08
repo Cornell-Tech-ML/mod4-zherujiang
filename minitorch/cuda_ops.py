@@ -398,25 +398,25 @@ def tensor_reduce(
 
         # Task 3.3.
         cache[pos] = reduce_value
-        
+
         if out_pos < out_size:
             to_index(out_pos, out_shape, out_index)
             out_pos = index_to_position(out_index, out_strides)
-            
+
             out_index[reduce_dim] = out_index[reduce_dim] * BLOCK_DIM + pos
             if out_index[reduce_dim] < a_shape[reduce_dim]:
                 # load data into shared memory
                 in_a = index_to_position(out_index, a_strides)
                 cache[pos] = a_storage[in_a]
                 cuda.syncthreads()
-                
+
                 s = 1
                 while s < BLOCK_DIM:
                     if pos % (2 * s) == 0 and pos + s < BLOCK_DIM:
                         cache[pos] = fn(cache[pos], cache[pos + s])
                         cuda.syncthreads()
                     s *= 2
-            
+
             if pos == 0:
                 out[out_pos] = cache[0]
 
@@ -466,7 +466,7 @@ def _mm_practice(out: Storage, a: Storage, b: Storage, size: int) -> None:
 
     if tx >= size or ty >= size:
         return
-    
+
     # Load data into shared memory
     shared_a[ty, tx] = a[ty * size + tx]
     shared_b[ty, tx] = b[ty * size + tx]
@@ -559,7 +559,7 @@ def _tensor_matrix_multiply(
     #    a) Copy into shared memory for a matrix.
     #    b) Copy into shared memory for b matrix
     #    c) Compute the dot produce for position c[i, j]
-    
+
     # Task 3.4.
     accum = 0.0
 
@@ -574,9 +574,7 @@ def _tensor_matrix_multiply(
         if i < a_shape[1] and k < a_shape[2]:
             # Copy into shared memory from global memory
             a_shared[pi, pj] = a_storage[
-                batch * a_batch_stride
-                + i * a_strides[1]
-                + k * a_strides[2]
+                batch * a_batch_stride + i * a_strides[1] + k * a_strides[2]
             ]
 
         # Copy matrix b values into shared memory
@@ -585,9 +583,7 @@ def _tensor_matrix_multiply(
         if k < b_shape[1] and j < b_shape[2]:
             # Copy into shared memory from global memory
             b_shared[pi, pj] = b_storage[
-                batch * b_batch_stride
-                + k * b_strides[1]
-                + j * b_strides[2]
+                batch * b_batch_stride + k * b_strides[1] + j * b_strides[2]
             ]
 
         # Ensure all threads have finished copying to shared memory

@@ -36,7 +36,7 @@ def test_max(t: Tensor) -> None:
     for dim in range(3):
         # Apply max operation
         out = minitorch.max(t, dim)
-        
+
         # Check each position in the output
         for i in range(2):
             for j in range(3):
@@ -48,7 +48,7 @@ def test_max(t: Tensor) -> None:
                         continue
                     if dim == 2 and k != 0:
                         continue
-                    
+
                     # Calculate expected max value manually
                     if dim == 0:
                         expected = max([t[ind, j, k] for ind in range(2)])
@@ -56,9 +56,9 @@ def test_max(t: Tensor) -> None:
                         expected = max([t[i, ind, k] for ind in range(3)])
                     else:  # dim == 2
                         expected = max([t[i, j, ind] for ind in range(4)])
-                    
+
                     assert_close(out[i, j, k], expected)
-    
+
     # Test gradient
     # can not use central difference to approximate gradient for max
     # minitorch.grad_check(lambda t: minitorch.max(t, dim=1), t)

@@ -7,10 +7,10 @@
 * Overview: https://minitorch.github.io/module4.html
 
 ## Task 4.5 Digit classification (MNIST)
-Training log: [digit_classification_log.txt](./assets/mnist.txt)
+Training log: [digit classification log](./assets/mnist.txt)
 
 ## Task 4.5 Sentiment classification (SST2)
-Training log: [sentiment_classification_log.txt](./assets/sentiment.txt)
+Training log: [sentiment classification log](./assets/sentiment.txt)
 
 ## Instructions
 
