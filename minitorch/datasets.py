@@ -5,6 +5,17 @@ from typing import List, Tuple
 
 
 def make_pts(N: int) -> List[Tuple[float, float]]:
+    """Create N 2-dimensional random points
+
+    Args:
+    ----
+        N (int): Number of points to be generated
+
+    Returns:
+    -------
+        List: A list of 2D points, each represented using a tuple
+
+    """
     X = []
     for i in range(N):
         x_1 = random.random()
@@ -21,6 +32,17 @@ class Graph:
 
 
 def simple(N: int) -> Graph:
+    """Generates a graph of N random 2D points, adding a third dimension y = f(x_1, x_2) and y in [0, 1]
+
+    Args:
+    ----
+        N (int): Number of points to plot
+
+    Returns:
+    -------
+        Graph: The Graph class based on the dataset
+
+    """
     X = make_pts(N)
     y = []
     for x_1, x_2 in X:
@@ -30,6 +52,17 @@ def simple(N: int) -> Graph:
 
 
 def diag(N: int) -> Graph:
+    """Generates a graph of N random 2D points, adding a third dimension y = f(x_1, x_2) and y in [0, 1]
+
+    Args:
+    ----
+        N (int): Number of points to plot
+
+    Returns:
+    -------
+        Graph: The Graph class based on the dataset
+
+    """
     X = make_pts(N)
     y = []
     for x_1, x_2 in X:
@@ -39,6 +72,17 @@ def diag(N: int) -> Graph:
 
 
 def split(N: int) -> Graph:
+    """Generates a graph of N random 2D points, adding a third dimension y = f(x_1, x_2) and y in [0, 1]
+
+    Args:
+    ----
+        N (int): Number of points to plot
+
+    Returns:
+    -------
+        Graph: The Graph class based on the dataset
+
+    """
     X = make_pts(N)
     y = []
     for x_1, x_2 in X:
@@ -48,6 +92,17 @@ def split(N: int) -> Graph:
 
 
 def xor(N: int) -> Graph:
+    """Generates a graph of N random 2D points, adding a third dimension y = f(x_1, x_2) and y in [0, 1]
+
+    Args:
+    ----
+        N (int): Number of points to plot
+
+    Returns:
+    -------
+        Graph: The Graph class based on the dataset
+
+    """
     X = make_pts(N)
     y = []
     for x_1, x_2 in X:
@@ -57,6 +112,17 @@ def xor(N: int) -> Graph:
 
 
 def circle(N: int) -> Graph:
+    """Generates a graph of N random 2D points, adding a third dimension y = f(x_1, x_2) and y in [0, 1]
+
+    Args:
+    ----
+        N (int): Number of points to plot
+
+    Returns:
+    -------
+        Graph: The Graph class based on the dataset
+
+    """
     X = make_pts(N)
     y = []
     for x_1, x_2 in X:
@@ -67,6 +133,18 @@ def circle(N: int) -> Graph:
 
 
 def spiral(N: int) -> Graph:
+    """Generates a graph of N random 2D points, adding a third dimension y = f(x_1, x_2) and y in [0, 1]
+
+    Args:
+    ----
+        N (int): Number of points to plot
+
+    Returns:
+    -------
+        Graph: The Graph class based on the dataset
+
+    """
+
     def x(t: float) -> float:
         return t * math.cos(t) / 20.0
 
